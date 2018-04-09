@@ -3,7 +3,7 @@ Hans Martin
 University of Washington
 APL
 
-Last Edited: March 26, 2018
+Last Edited: April 8, 2018
 '''
 
 import os
@@ -25,9 +25,9 @@ N = 500
 '''
 RMS, mean, density functions
 '''
-
 def rms(v):
-    rms = crctn*np.sqrt(np.convolve(np.square(v), np.ones((N,))/N, mode='same'))
+    rms = crctn*np.sqrt(np.convolve(
+        np.square(v), np.ones((N,))/N, mode='same'))
     return(rms)
 
 def mean(rms): 
@@ -35,10 +35,12 @@ def mean(rms):
         m =+ RMS[i]/len(RMS)
     return(m)
 
+density = []
 def dens(mean):
-    d = np.divide(mean, c, out=np.zeros_like(mean), where=c!=0)
+    d = np.divide(mean, c, 
+        out=np.zeros_like(mean), where=c!=0)
+    density.append(d)
     return(d)
-
 
 if (os.getcwd != 'data'): 
     os.chdir('data')
@@ -55,7 +57,8 @@ vt = []
 for f, data in dirpath.items():
     df = []
     for i in data:
-        df.append(np.ndfromtxt(f+'/'+i, delimiter='\t'))
+        df.append(np.ndfromtxt(
+            f+'/'+i, delimiter='\t'))
     vt.append(df)
 
 '''
@@ -74,18 +77,29 @@ for k in range(0,len(vt)):
     plt.title(str(os.listdir()[k])+' RMS')
     plt.xlabel('Seconds')
 
-
     plt.figure()
     plt.ion()
     plt.plot(t,mean(RMS))
     plt.title(str(os.listdir()[k])+' Average')
     plt.xlabel('Seconds')
 
-
     plt.figure()
     plt.ion()
     plt.plot(t,dens(mean(RMS)))
     plt.title(str(os.listdir()[k])+' Density')
+    plt.xlabel('Seconds')
+    plt.ylabel('$m^-3$')
+
+'''
+PLOT MULTIPLE DENSITY PLOTS IFF DATA > 1
+'''
+if len(vt) > 1:
+    plt.figure()
+    for h in range(0, len(density)):
+        plt.ion()
+        plt.plot(t, density[h], label=str(os.listdir()[h]))
+    plt.title('Density Comparison')
+    plt.legend()
     plt.xlabel('Seconds')
     plt.ylabel('$m^-3$')
 
