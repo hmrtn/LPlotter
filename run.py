@@ -1,108 +1,96 @@
-'''
-Hans Martin
-University of Washington
-APL
+####################################
+####  University of Washington  ####
+####  Advanced Propulsion Lab   ####
+####       Hans Martin          ####
+####  Last Edit: Apr 17, 2018   ####
+####################################
 
-Last Edited: April 8, 2018
-'''
 
 import os
+import pandas as pd 
 import numpy as np
-import matplotlib.pyplot as plt                                   
+import matplotlib.pyplot as plt
 
-'''
-CONSTANTS
-'''
-k = 1.38E-23
-T = 10*1.16E4
+temp = 10*1.16E4
+boltz = 1.38E-23
 area = 1.749E-5
-e = 1.602E-19
+elec = 1.602E-19
 mass = 6.67E-26
-crctn = 0.004
-c = (0.6*e*area*np.sqrt(k*T/mass))
-N = 500
-
-'''
-RMS, mean, density functions
-'''
-def rms(v):
-    rms = crctn*np.sqrt(np.convolve(
-        np.square(v), np.ones((N,))/N, mode='same'))
-    return(rms)
-
-def mean(rms): 
-    for i in range(0,len(RMS)):
-        m =+ RMS[i]/len(RMS)
-    return(m)
-
-density = []
-def dens(mean):
-    d = np.divide(mean, c, 
-        out=np.zeros_like(mean), where=c!=0)
-    density.append(d)
-    return(d)
-
-if (os.getcwd != 'data'): 
+correct = 0.004
+const = 0.6*elec*area*np.sqrt(boltz*temp/mass)
+window = 500
+    
+if 'data' in os.listdir(): 
     os.chdir('data')
+    
+class Folder:
+    
+    _CONT = []
+    _DATA = []
+    _RMS = []
+    _AVG = []
+    _DENS = []
+    
+    def __init__(self, name):
 
-dirpath = {}
-for f in os.listdir():
-    dirpath[f] = []
+        self.name = name
+        self.files = Folder._CONT
+        self.data = Folder._DATA
+        self.rms = Folder._RMS
+        self.avg = Folder._AVG
+        self.density = Folder._DENS
+    
+    def get_files(self):
+        
+        if not []: self.files.clear()
+        for k in os.listdir(self.name):
+            self.files.append(k)
+    
+    def get_data(self):
+        
+        if not []: self.data.clear()
+        for j in os.listdir(self.name):
+            self.data.append(np.ndfromtxt(self.name+'/'+j, delimiter = '\t'))
+    
+    def get_rms(self):
+        
+        if not []: self.rms.clear()
+        for p in range(len(self.data)):
+            v = self.data[p][:,1]
+            self.rms.append(correct*np.sqrt(np.convolve(np.square(v), 
+                            np.ones((window,))/window, mode='same')))
+    
+    def get_avg(self):
+        
+        if not []: self.avg = []
+        self.avg = sum(self.rms)/ len(self.rms)
+    
+    def get_density(self):
 
-for f, data in dirpath.items():
-    for t in os.listdir(f):
-        data.append(t)
+        self.density = self.avg/ const
 
-vt = []
-for f, data in dirpath.items():
-    df = []
-    for i in data:
-        df.append(np.ndfromtxt(
-            f+'/'+i, delimiter='\t'))
-    vt.append(df)
+expo = dict()
 
-'''
-vt[folder][txt file][time, voltage]
-'''
-RMS = []
-for k in range(0,len(vt)):
-    for i in range(0,len(vt[k])):
-        RMS.append(rms(vt[k][i][:,1]))
-        t = vt[k][i][:,0]
+for folders in os.listdir(): 
 
-    plt.figure()
-    plt.ion()
-    for r in range(0,len(RMS)):
-        plt.plot(t,RMS[r])
-    plt.title(str(os.listdir()[k])+' RMS')
-    plt.xlabel('Seconds')
+    inst = Folder(folders)
+    inst.get_files()
+    inst.get_data()
+    inst.get_rms()
+    inst.get_avg()
+    inst.get_density()
 
-    plt.figure()
-    plt.ion()
-    plt.plot(t,mean(RMS))
-    plt.title(str(os.listdir()[k])+' Average')
-    plt.xlabel('Seconds')
+    time_axis = inst.data[0][:,0]*1E6
+    expo.update({inst.name : inst.density})
 
-    plt.figure()
-    plt.ion()
-    plt.plot(t,dens(mean(RMS)))
-    plt.title(str(os.listdir()[k])+' Density')
-    plt.xlabel('Seconds')
-    plt.ylabel('$m^-3$')
+pd.DataFrame(expo).to_csv('../export/density_export.csv', index=False)
 
-'''
-PLOT MULTIPLE DENSITY PLOTS IFF DATA > 1
-'''
-if len(vt) > 1:
-    plt.figure()
-    for h in range(0, len(density)):
-        plt.ion()
-        plt.plot(t, density[h], label=str(os.listdir()[h]))
-    plt.title('Density Comparison')
-    plt.legend()
-    plt.xlabel('Seconds')
-    plt.ylabel('$m^-3$')
+for key in expo.keys():
+    plt.plot(time_axis, expo[key], label = key)
 
-
+plt.title('Plasma Density ' + ('Comparison' if len(expo) > 1 else ''))
+plt.grid( which = 'major', alpha = 0.5); plt.grid( which = 'minor', alpha = 0.2)
+plt.minorticks_on()
+plt.ylabel('$n_{e}$ ($m^{-3}$)'); plt.xlabel('Time ($\mu$s)')
+plt.legend()
 plt.show(block=True)
-
